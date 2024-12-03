@@ -1,0 +1,129 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "mysql"
+  url      = env("DATABASE_URL")
+}
+
+enum RoleEnum {
+  ADMIN
+  EDITOR
+  USER
+}
+
+enum BaseStatusEnum {
+  INACTIVE
+  ACTIVE
+}
+
+model Comment {
+  id        Int       @id @default(autoincrement())
+  text      String
+  userId    Int       @map("user_id")
+  postId    Int       @map("post_id")
+  createdAt DateTime  @default(now()) @map("created_at")
+  updatedAt DateTime  @updatedAt @map("updated_at")
+  deletedAt DateTime? @map("deleted_at")
+
+  user User @relation(fields: [userId], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "comments_author_id_users_id_fk")
+  post Post @relation(fields: [postId], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "comments_post_id_posts_id_fk")
+
+  @@map("comment")
+}
+
+model Post {
+  id          Int       @id @default(autoincrement())
+  slug        String
+  title       String
+  description String
+  image       String?
+  views       Int       @default(0)
+  categoryId  Int       @map("category_id")
+  userId      Int       @map("user_id")
+  tagId       Int?      @map("tag_id")
+  createdAt   DateTime  @default(now()) @map("created_at")
+  updatedAt   DateTime  @updatedAt @map("updated_at")
+  deletedAt   DateTime? @map("deleted_at")
+
+  category Category @relation(fields: [categoryId], references: [id])
+  user     User     @relation(fields: [userId], references: [id])
+  tag      Tag?     @relation(fields: [tagId], references: [id])
+
+  comments Comment[]
+
+  @@unique([slug])
+  @@map("post")
+}
+
+model User {
+  id                 Int            @id @default(autoincrement())
+  email              String
+  username           String
+  password           String
+  hashedRefreshToken String?        @map("hashed_refresh_token")
+  role               RoleEnum       @default(USER)
+  status             BaseStatusEnum @default(ACTIVE)
+  createdAt          DateTime       @default(now()) @map("created_at")
+  updatedAt          DateTime       @updatedAt @map("updated_at")
+  deletedAt          DateTime?      @map("deleted_at")
+
+  comments Comment[]
+  posts    Post[]
+  address  Address[]
+
+  @@unique([email])
+  @@unique([username])
+  @@map("user")
+}
+
+model Address {
+  id          Int       @id @default(autoincrement())
+  phoneNumber String    @map("phone_number") @db.VarChar(15)
+  street      String
+  city        String
+  state       String
+  postalCode  String    @map("postal_code")
+  isDefault   Boolean   @default(false) @map("is_default")
+  userId      Int       @map("user_id")
+  createdAt   DateTime  @default(now()) @map("created_at")
+  updatedAt   DateTime  @updatedAt @map("updated_at")
+  deletedAt   DateTime? @map("deleted_at")
+
+  user User @relation(fields: [userId], references: [id])
+
+  @@map("address")
+}
+
+model Category {
+  id        Int            @id @default(autoincrement())
+  slug      String         @unique
+  title     String
+  image     String?
+  status    BaseStatusEnum @default(ACTIVE)
+  parentId  Int?           @map("parent_id")
+  createdAt DateTime       @default(now()) @map("created_at")
+  updatedAt DateTime       @updatedAt @map("updated_at")
+  deletedAt DateTime?      @map("deleted_at")
+
+  parent   Category?  @relation("CategoryDescendants", fields: [parentId], references: [id], onDelete: SetNull)
+  children Category[] @relation("CategoryDescendants")
+  posts    Post[]
+
+  @@map("category")
+}
+
+model Tag {
+  id        Int            @id @default(autoincrement())
+  slug      String         @unique
+  title     String
+  status    BaseStatusEnum @default(ACTIVE)
+  createdAt DateTime       @default(now()) @map("created_at")
+  updatedAt DateTime       @updatedAt @map("updated_at")
+  deletedAt DateTime?      @map("deleted_at")
+
+  posts Post[]
+
+  @@map("tag")
+}
